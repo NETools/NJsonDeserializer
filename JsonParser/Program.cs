@@ -1,4 +1,5 @@
 ﻿using JsonParser.Core;
+using JsonParser.Structs;
 using System.Text.Json;
 
 Console.WriteLine("BismIllah");
@@ -39,24 +40,23 @@ t.Objects.Add("rofl");
 t.Objects.Add(1.5);
 t.Objects.Add(191);
 t.Objects.Add(new C() { AA = 215, Tuple = new Tuple<string, string>("a", "b") });
+t.Objects.Add(new List<object>(new object[] { "opjef", "rofl", 191, 215.5, 299229 }));
+t.Objects.Add(new Dictionary<string, int>() { { "a", 55 } });
 var json = nJson.SerializeInstance(t);
 
-//var Tt = new T();
-//nJson.DeserializeIntoInstance(json, Tt, (type) =>
-//{
-//    NJsonInstanciatorResult rslt = new();
-//    rslt.Code = NJsonInstanciatorResultCode.Failed;
+var Tt = new T();
+nJson.DeserializeIntoInstance(json, Tt, (type) =>
+{
+    NJsonInstanciatorResult rslt = new();
+    rslt.Code = NJsonInstanciatorResultCode.Failed;
 
-//    return rslt;
-//});
-
-
-var tt = JsonSerializer.Deserialize<T>(json);
-var s = tt.Objects[3];
+    return rslt;
+});
 
 
 
-Console.WriteLine(s.GetType());
+
+Console.WriteLine();
 
 
 class C
