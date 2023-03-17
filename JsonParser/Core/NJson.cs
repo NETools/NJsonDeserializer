@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using JsonParser.Structs;
+using JsonParser.Structs.Objects;
 using JsonParser.Tokenizer;
 
 namespace JsonParser.Core
@@ -32,6 +33,9 @@ namespace JsonParser.Core
             _rules.AddProcessor(ProcessDictionary,
                 (t) => t.Namespace == "System.Collections.Generic",
                 (t) => t.Name.Contains("Dictionary"));
+            _rules.AddProcessor(ProcessObject,
+                (t) => t.Namespace == "System",
+                (t) => t == typeof(object));
 
             _rules.AddMapper(
                 (name) => $"m_{name}",
@@ -84,6 +88,51 @@ namespace JsonParser.Core
             }
         }
 
+        private object ProcessObject(Type currentType, IEnumerator<JsonToken> tokenStream, Func<Type, NJsonInstanciatorResult> classInstanciator)
+        {
+            tokenStream.MoveNext();
+
+            switch (tokenStream.Current.TokenType)
+            {
+                case TokenType.String:
+                    return new JsonValue() { Value = tokenStream.Current.Value };
+                case TokenType.QuoteSign:
+                    var jsonObject = new JsonValue();
+                    tokenStream.MoveNext();
+                    jsonObject.Value = tokenStream.Current.Value;
+                    tokenStream.MoveNext();
+                    return jsonObject;
+                    break;
+                case TokenType.BracketOpen:
+                    var subJson = ReadBetweenBrackets(tokenStream);
+                    var jsonClassObject = new JsonClassObject();
+                    var subTokenStream = JsonTokenizer.NormalizeTokenStream(JsonTokenizer.TokenizeJson(subJson)).GetEnumerator();
+                    subTokenStream.MoveNext();
+
+                    while (subTokenStream.MoveNext())
+                    {
+                        if (subTokenStream.Current.TokenType == TokenType.Comma)
+                            subTokenStream.MoveNext();
+                        if (subTokenStream.Current.TokenType != TokenType.QuoteSign)
+                            break;
+                        subTokenStream.MoveNext();
+                        string variableName = subTokenStream.Current.Value;
+                        jsonClassObject[variableName] = null;
+                        subTokenStream.MoveNext();
+                        subTokenStream.MoveNext();
+
+                        jsonClassObject[variableName] = (IJsonObject)ProcessObject(null, subTokenStream, classInstanciator);
+                    }
+
+                    return jsonClassObject;
+                case TokenType.BraceOpen:
+
+                    break;
+            }
+
+            throw new NotImplementedException("Object types are not supported yet.");
+        }
+
         private object ProcessDictionary(Type currentType, IEnumerator<JsonToken> tokenStream, Func<Type, NJsonInstanciatorResult> classInstaciator)
         {
             var keyType = currentType.GenericTypeArguments[0];
@@ -96,10 +145,8 @@ namespace JsonParser.Core
             var genericDictionaryType = dictionaryType.MakeGenericType(keyType, valueType);
             var dictionary = (IDictionary)Activator.CreateInstance(genericDictionaryType);
 
-            while (tokenStream.MoveNext())
+            while (tokenStream.MoveNext() && tokenStream.Current.TokenType != TokenType.BracketClose)
             {
-                if (tokenStream.Current.TokenType == TokenType.BracketClose)
-                    break;
                 var parsedKey = keyProcessor.Invoke(keyType, tokenStream, classInstaciator);
                 tokenStream.MoveNext();
                 if (tokenStream.Current.TokenType != TokenType.Colon)
