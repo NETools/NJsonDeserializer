@@ -42,19 +42,24 @@ namespace JsonParser.Core
                 (t) => t.Name.Contains(typeof(Tuple).Name));
         }
 
-        public string SerializeInstance(object instance)
+        public string Serialize(object instance)
         {
             return JsonSerializer.Serialize(instance);
         }
 
-        public void DeserializeIntoInstance(string json, object instance, Func<Type, NJsonInstanciatorResult> classInstanciator = null)
+        public object Deserialize(Type instanceType, string json, Func<Type, NJsonInstanciatorResult> classInstanciator = null)
         {
-            if(classInstanciator == null)
+            if (classInstanciator == null)
             {
-                classInstanciator = (type) => new NJsonInstanciatorResult() { Code = NJsonInstanciatorResultCode.Error };
+                classInstanciator = (type) => new NJsonInstanciatorResult() { Code = NJsonInstanciatorResultCode.Failed };
+            }
+            var instanciatorResult = classInstanciator(instanceType);
+            if (instanciatorResult.Code == NJsonInstanciatorResultCode.Failed)
+            {
+                instanciatorResult.Value = Activator.CreateInstance(instanceType);
             }
 
-            var instanceType = instance.GetType();
+            var instance = instanciatorResult.Value;
             var mapper = _rules.MatchMapper(instanceType);
             var properties = instanceType.GetProperties().ToList();
             var tokenStream = JsonTokenizer.NormalizeTokenStream(JsonTokenizer.TokenizeJson(json)).GetEnumerator();
@@ -90,6 +95,13 @@ namespace JsonParser.Core
                     }
                 }
             }
+
+            return instance;
+        }
+
+        public T Deserialize<T>(string json, Func<Type, NJsonInstanciatorResult> classInstanciator = null)
+        {
+            return (T)Deserialize(typeof(T), json, classInstanciator);
         }
 
         private object ProcessObject(Type currentType, IEnumerator<JsonToken> tokenStream, Func<Type, NJsonInstanciatorResult> classInstanciator)
@@ -235,15 +247,7 @@ namespace JsonParser.Core
 
             var subJson = ReadBetweenBrackets(tokenStream);
 
-            var instanciationResult = classInstaciator(currentType);
-            if (instanciationResult.Code == NJsonInstanciatorResultCode.Failed)
-            {
-                instanciationResult.Value = Activator.CreateInstance(currentType);
-            }
-
-            DeserializeIntoInstance(subJson, instanciationResult.Value, classInstaciator);
-
-            return instanciationResult.Value;
+            return Deserialize(currentType, subJson, classInstaciator);
         }
 
         /// <summary>
