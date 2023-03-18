@@ -47,8 +47,13 @@ namespace JsonParser.Core
             return JsonSerializer.Serialize(instance);
         }
 
-        public void DeserializeIntoInstance(string json, object instance, Func<Type, NJsonInstanciatorResult> classInstanciator)
+        public void DeserializeIntoInstance(string json, object instance, Func<Type, NJsonInstanciatorResult> classInstanciator = null)
         {
+            if(classInstanciator == null)
+            {
+                classInstanciator = (type) => new NJsonInstanciatorResult() { Code = NJsonInstanciatorResultCode.Error };
+            }
+
             var instanceType = instance.GetType();
             var mapper = _rules.MatchMapper(instanceType);
             var properties = instanceType.GetProperties().ToList();
