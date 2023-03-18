@@ -9,7 +9,7 @@ namespace JsonParser.Structs
     public enum NJsonInstanciatorResultCode
     {
         Success,
-        SessionUnknown,
+        Error,
         Failed
     }
 

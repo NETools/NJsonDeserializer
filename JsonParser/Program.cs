@@ -37,12 +37,13 @@ NJson nJson = new NJson();
 //});
 
 T t = new T();
+t.DateTime = DateTime.Now.Subtract(TimeSpan.FromDays(100));
 t.Objects.Add("rofl");
 t.Objects.Add(1.5);
 t.Objects.Add(191);
 t.Objects.Add(new C() { AA = 215, Tuple = new Tuple<string, string>("a", "b") });
 t.Objects.Add(new List<object>(new object[] { "opjef", "rofl", 191, 215.5, 299229 }));
-t.Objects.Add(new Dictionary<string, List<int>>() { { "a", new List<int>() { 0, 191 } } });
+t.Objects.Add(new Dictionary<string, List<int>>() { { "a", new List<int>() { 0, 191 } }, { "b", new List<int>() { 215, 2150 } } });
 t.Objects.Add(new string[] { "a", "b", "c" });
 
 t.Test = new List<int>(new int[] { 1, 2, 3, 4, 5 });
@@ -60,7 +61,7 @@ nJson.DeserializeIntoInstance(json, Tt, (type) =>
 
 
 
-Console.WriteLine(((NJsonObject)Tt.Objects[3])["Tuple"]["Item2"].Value);
+Console.WriteLine(((NJsonObject)Tt.Objects[5])["b"][1].Value);
 
 
 class C
@@ -93,4 +94,6 @@ public class T
 {
     public List<object> Objects { get; set; } = new List<object>();
     public object Test { get; set; }
+
+    public DateTime DateTime { get; set; }
 }
