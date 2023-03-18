@@ -89,25 +89,24 @@ namespace JsonParser.Core
 
         private object ProcessObject(Type currentType, IEnumerator<JsonToken> tokenStream, Func<Type, NJsonInstanciatorResult> classInstanciator)
         {
+            var jsonObject = new NJsonObject();
             tokenStream.MoveNext();
-
             switch (tokenStream.Current.TokenType)
             {
                 case TokenType.String:
-                    return new NJsonObject() { Value = tokenStream.Current.Value };
+                    jsonObject.Value = tokenStream.Current.Value;
+                    jsonObject.ObjectType = NJsonObjectType.Number;
+                    break;
                 case TokenType.QuoteSign:
-                    var jsonObject = new NJsonObject();
                     tokenStream.MoveNext();
                     jsonObject.Value = tokenStream.Current.Value;
                     tokenStream.MoveNext();
-                    return jsonObject;
+                    jsonObject.ObjectType = NJsonObjectType.String;
                     break;
                 case TokenType.BracketOpen:
                     var subJson = ReadBetweenBrackets(tokenStream);
-                    var jsonClassObject = new NJsonObject();
                     var subTokenStream = JsonTokenizer.NormalizeTokenStream(JsonTokenizer.TokenizeJson(subJson)).GetEnumerator();
                     subTokenStream.MoveNext();
-
                     while (subTokenStream.MoveNext())
                     {
                         if (subTokenStream.Current.TokenType == TokenType.Comma)
@@ -119,22 +118,23 @@ namespace JsonParser.Core
                         subTokenStream.MoveNext();
                         subTokenStream.MoveNext();
 
-                        jsonClassObject.AddClass(variableName, (NJsonObject)ProcessObject(null, subTokenStream, classInstanciator));
+                        jsonObject.AddClass(variableName, (NJsonObject) ProcessObject(null, subTokenStream, classInstanciator));
                     }
-
-                    return jsonClassObject;
+                    jsonObject.ObjectType = NJsonObjectType.Class;
+                    break;
                 case TokenType.BraceOpen:
-                    List<object> jsonObjects = new List<object>();
-                    jsonObjects.Add(ProcessObject(null, tokenStream, classInstanciator));
+                    jsonObject.AddObject((NJsonObject)ProcessObject(null, tokenStream, classInstanciator));
 
                     while (tokenStream.MoveNext() && tokenStream.Current.TokenType != TokenType.BraceClose)
                     {
-                        jsonObjects.Add(ProcessObject(null, tokenStream, classInstanciator));
+                        jsonObject.AddObject((NJsonObject)ProcessObject(null, tokenStream, classInstanciator));
                     }
-                    return jsonObjects;
+
+                    jsonObject.ObjectType = NJsonObjectType.List;
+                    break;
             }
 
-            throw new NotImplementedException("Object types are not supported yet.");
+            return jsonObject;
         }
 
         private object ProcessDictionary(Type currentType, IEnumerator<JsonToken> tokenStream, Func<Type, NJsonInstanciatorResult> classInstaciator)

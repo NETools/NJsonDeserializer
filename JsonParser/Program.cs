@@ -1,4 +1,5 @@
-﻿using JsonParser.Core;
+﻿// - 1 -
+using JsonParser.Core;
 using JsonParser.Structs;
 using System.Text.Json;
 
@@ -41,7 +42,10 @@ t.Objects.Add(1.5);
 t.Objects.Add(191);
 t.Objects.Add(new C() { AA = 215, Tuple = new Tuple<string, string>("a", "b") });
 t.Objects.Add(new List<object>(new object[] { "opjef", "rofl", 191, 215.5, 299229 }));
-t.Objects.Add(new Dictionary<string, int>() { { "a", 55 } });
+t.Objects.Add(new Dictionary<string, List<int>>() { { "a", new List<int>() { 0, 191 } } });
+t.Objects.Add(new string[] { "a", "b", "c" });
+
+t.Test = new List<int>(new int[] { 1, 2, 3, 4, 5 });
 var json = nJson.SerializeInstance(t);
 
 var Tt = new T();
@@ -56,7 +60,7 @@ nJson.DeserializeIntoInstance(json, Tt, (type) =>
 
 
 
-Console.WriteLine();
+Console.WriteLine(((NJsonObject)Tt.Objects[3])["Tuple"]["Item2"].Value);
 
 
 class C
@@ -88,4 +92,5 @@ class A
 public class T
 {
     public List<object> Objects { get; set; } = new List<object>();
+    public object Test { get; set; }
 }
